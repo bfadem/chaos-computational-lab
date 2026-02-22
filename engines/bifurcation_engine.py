@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Callable, Iterable, Tuple
+from typing import Callable, Iterable, List, Tuple
 
 import numpy as np
 from scipy.integrate import solve_ivp
@@ -10,12 +9,6 @@ from scipy.integrate import solve_ivp
 Array = np.ndarray
 RhsFn = Callable[[float, Array, object], Array]
 ValueFn = Callable[[Array, Array], Array]
-
-
-@dataclass
-class SweepResult:
-    params: Array
-    values: Array
 
 
 def _set_param(params: object, name: str, value: float) -> None:
@@ -57,14 +50,14 @@ def bifurcation_sweep(
     rtol: float = 1e-6,
     atol: float = 1e-9,
     max_step: float | None = None,
-) -> SweepResult:
+) -> List[Tuple[float, float]]:
     """
     Generic bifurcation sweep using solve_ivp with continuation.
 
     - Sweeps `param_name` over `param_values`.
     - Uses final state from each integration as the next initial condition.
     - Discards a transient fraction of samples.
-    - Returns (param, value) pairs in parallel arrays.
+    - Returns a list of (param, value) pairs.
 
     If `value_fn` is None, returns the first state component samples after transient.
     """
@@ -83,8 +76,7 @@ def bifurcation_sweep(
     if value_fn is None:
         value_fn = lambda t, y: y[0]
 
-    params_out: list[float] = []
-    values_out: list[float] = []
+    pairs: List[Tuple[float, float]] = []
 
     y_init = np.asarray(y0, dtype=float)
     cut = int(np.floor(transient_fraction * t_eval.size))
@@ -110,12 +102,9 @@ def bifurcation_sweep(
         values = np.asarray(value_fn(t_keep, y_keep), dtype=float).ravel()
 
         if values.size:
-            params_out.extend([float(pv)] * int(values.size))
-            values_out.extend(values.tolist())
+            pv_f = float(pv)
+            pairs.extend((pv_f, float(v)) for v in values.tolist())
 
         y_init = sol.y[:, -1]
 
-    return SweepResult(
-        params=np.array(params_out, dtype=float),
-        values=np.array(values_out, dtype=float),
-    )
+    return pairs
