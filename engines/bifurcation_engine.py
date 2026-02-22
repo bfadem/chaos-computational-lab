@@ -50,6 +50,7 @@ def bifurcation_sweep(
     rtol: float = 1e-6,
     atol: float = 1e-9,
     max_step: float | None = None,
+    verbose: bool = False,
 ) -> List[Tuple[float, float]]:
     """
     Generic bifurcation sweep using solve_ivp with continuation.
@@ -82,7 +83,13 @@ def bifurcation_sweep(
     cut = int(np.floor(transient_fraction * t_eval.size))
     t_keep = t_eval[cut:]
 
-    for pv in param_values:
+    param_values_list = list(param_values)
+    total = len(param_values_list)
+    stride = max(1, total // 20) if total else 1
+
+    for i, pv in enumerate(param_values_list, start=1):
+        if verbose and (i == 1 or i == total or i % stride == 0):
+            print(f"[BIF] {i}/{total} param={float(pv):.6f}", flush=True)
         _set_param(params, param_name, pv)
 
         sol = solve_ivp(
@@ -108,3 +115,48 @@ def bifurcation_sweep(
         y_init = sol.y[:, -1]
 
     return pairs
+
+
+def compute_bifurcation(
+    rhs: RhsFn,
+    params: object,
+    param_name: str,
+    param_values: Iterable[float],
+    y0: Array,
+    t_span: Tuple[float, float],
+    *,
+    dt: float,
+    transient_fraction: float,
+    state_index: int = 0,
+    method: str = "BDF",
+    rtol: float = 1e-6,
+    atol: float = 1e-9,
+    max_step: float | None = None,
+    verbose: bool = False,
+) -> List[Tuple[float, float]]:
+    """
+    Convenience wrapper for typical bifurcation diagrams.
+    Computes local maxima of a chosen state component after transient.
+    """
+    if state_index < 0:
+        raise ValueError("state_index must be non-negative.")
+
+    def _value_fn(_t: Array, y: Array) -> Array:
+        return local_maxima(y[state_index])
+
+    return bifurcation_sweep(
+        rhs=rhs,
+        params=params,
+        param_name=param_name,
+        param_values=param_values,
+        y0=y0,
+        t_span=t_span,
+        dt=dt,
+        transient_fraction=transient_fraction,
+        value_fn=_value_fn,
+        method=method,
+        rtol=rtol,
+        atol=atol,
+        max_step=max_step,
+        verbose=verbose,
+    )
