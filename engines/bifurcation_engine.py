@@ -92,6 +92,10 @@ def bifurcation_sweep(
             print(f"[BIF] {i}/{total} param={float(pv):.6f}", flush=True)
         _set_param(params, param_name, pv)
 
+        solve_kwargs = {}
+        if max_step is not None:
+            solve_kwargs["max_step"] = max_step
+
         sol = solve_ivp(
             fun=lambda t, y: rhs(t, y, params),
             t_span=(float(t_span[0]), float(t_span[1])),
@@ -100,7 +104,7 @@ def bifurcation_sweep(
             t_eval=t_eval,
             rtol=rtol,
             atol=atol,
-            max_step=max_step,
+            **solve_kwargs,
         )
         if not sol.success:
             continue

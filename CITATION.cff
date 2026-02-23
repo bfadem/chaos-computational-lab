@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it."
+title: "chaos-computational-lab"
+type: software
+version: 0.1.0
+date-released: 2026-02-23
+authors:
+  - family-names: "Fadem"
+    given-names: "Brett"
+license: "MIT"
+repository-code: "https://github.com/brettfadem/chaos-computational-lab"
+keywords:
+  - nonlinear dynamics
+  - chaos
+  - bifurcation
+  - teaching
+  - dynamical systems
